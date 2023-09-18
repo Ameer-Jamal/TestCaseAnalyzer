@@ -19,7 +19,8 @@ def read_latest_log_from_directory(directory: str):
 
         # Print the files with their numbers
         for idx, filename in enumerate(files, 1):
-            print(f"{idx}. {filename}\n----------------------------------------------------")
+            print(f"{idx}. {filename}")
+            print("-----------------------------------------")
 
         # Ask the user to choose a file by number
         choice = int(input("Choose a log file by number: "))
@@ -133,7 +134,7 @@ def write_to_temp_file(results: Dict[int, List[str]]) -> str:
 
 if __name__ == "__main__":
     # Define the directory where the log files are located
-    directory = "/Users/ajamal/.npm/_logs"
+    directory = "/Users/ajamal/.npm/_logs/TESTCI_Runs"
     # Read the latest log file from the directory and get its memory-mapped object
     mm = read_latest_log_from_directory(directory)
     if mm:
