@@ -1,21 +1,4 @@
 # This program extracts failed test cases from log files and writes them to a temporary file
-# This program works for this package.json:
-# "codelyzer": "^4.1.0",
-# "jasmine-core": "2.6.2",
-# "jasmine-spec-reporter": "4.1.0",
-# "karma": "1.7.0",
-# "karma-chrome-launcher": "2.1.1",
-# "karma-cli": "1.0.1",
-# "karma-coverage-istanbul-reporter": "2.1.1",
-# "karma-jasmine": "1.1.0",
-# "karma-jasmine-html-reporter": "0.2.2",
-# "karma-junit-reporter": "1.2.0",
-# "ng-mocks": "7.7.0",
-#  "protractor": "5.1.2",
-#  "puppeteer": "1.12.2",
-
-# "@angular/core": "6.0.7",
-
 ###########################################
 
 # Import the modules needed for the program
