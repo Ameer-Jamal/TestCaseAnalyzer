@@ -36,7 +36,7 @@ def read_latest_log_from_directory(directory: str):
 
         # Print the files with their numbers
         for idx, filename in enumerate(files, 1):
-            print(f"{idx}. {filename}")
+            print(f"{idx}. {filename}\n----------------------------------------------------")
 
         # Ask the user to choose a file by number
         choice = int(input("Choose a log file by number: "))
