@@ -18,12 +18,20 @@ def read_latest_log_from_directory(directory: str):
         files.sort(key=lambda x: os.path.getmtime(os.path.join(directory, x)), reverse=True)
 
         # Print the files with their numbers
+        print("\n \033[42m \033[31m" + "\t" * 6 + "FILES:" + "\t" * 6 + "\033[0m\n")
         for idx, filename in enumerate(files, 1):
-            print(f"{idx}. {filename}")
-            print("-----------------------------------------")
+            print(f"\033[95m{idx}\033[0m. \033[93m{filename}\033[0m\n")
+            print("\033[47m\t" * 13 + "\033[0m\n")
 
         # Ask the user to choose a file by number
-        choice = int(input("Choose a log file by number: "))
+        choice = input("Choose a log file by number\n Enter to Select Latest \n \"R\" to refresh:  ")
+        # If the input is empty, default to the first log file
+        if choice == 'r' or choice == 'R':
+            print("\n \033[92m===REFRESHING====\033[0m\n")
+            return
+        else:
+            choice = 1 if choice == "" else int(choice)
+
         # Open the chosen file in read mode
         with open(os.path.join(directory, files[choice - 1]), 'r') as f:
             # Create a memory-mapped object from the file
@@ -65,7 +73,7 @@ def extract_failed_test_cases(mm: mmap.mmap, temp_file_path: str):
                 if fail_count not in seen_fail_counts:
                     # Extract the reason lines from the memory-mapped object using a generator expression
                     reason_lines = extract_reasons(iter(mm.readline, b""), reason_pattern, end_reason_pattern)
-                    temp.write("================================================================================\n")
+                    temp.write("====================================================================================\n")
                     # Write the fail count to the temporary file
                     temp.write(f"{fail_count} FAILED:\n")
                     # Write each reason line to the temporary file with a tab indentation
@@ -73,6 +81,14 @@ def extract_failed_test_cases(mm: mmap.mmap, temp_file_path: str):
                         temp.write(f"\t{reason}\n")
                     # Add the fail count to the seen set
                     seen_fail_counts.add(fail_count)
+        if not seen_fail_counts:
+            temp.write("\n")
+            temp.write("  _   _          _____                           _____                       _ \n")
+            temp.write(" | \\ | | ___   | ____|_ __ _ __ ___  _ __ ___   |  ___|__  _   _ _ __    __|  |\n")
+            temp.write(" |  \\| |/ _ \\  |  _| | '__| '__/ _  \| '__/ __| | |_ / _  \| | | | '_ \ /     |\n")
+            temp.write(" | |\\  | (_) | | |___| |  | | | (_) | |   \__ \ |  _| (_) | |_| | | | | (_|   |\n")
+            temp.write(" |_| \\_|\\___/  |_____|_|  |_|  \___/|_|  |___/ |_|  \___/ \ __,_|_| |_|\__,__ |\n")
+            temp.write("\n")
 
         # Close the memory-mapped object
         mm.close()
@@ -122,7 +138,7 @@ def write_to_temp_file(results: Dict[int, List[str]]) -> str:
         # Iterate over the results dictionary items
         for count, reasons in results.items():
             # Write a separator line to the temporary file
-            temp.write("================================================================================")
+            temp.write("============================================================================")
             # Write the fail count to the temporary file
             temp.write(f"{count} FAILED:\n")
             # Write each reason to the temporary file with a tab indentation
@@ -134,15 +150,26 @@ def write_to_temp_file(results: Dict[int, List[str]]) -> str:
 
 if __name__ == "__main__":
     # Define the directory where the log files are located
-    directory = "/Users/ajamal/.npm/_logs/TESTCI_Runs"
-    # Read the latest log file from the directory and get its memory-mapped object
-    mm = read_latest_log_from_directory(directory)
-    if mm:
-        # Create a temporary file path with a .txt suffix
-        temp_file_path = tempfile.mktemp(suffix=".txt")
-        # Extract failed test cases from the memory-mapped object and write them to the temporary file
-        extract_failed_test_cases(mm, temp_file_path)
-        # Close the memory-mapped object
-        mm.close()
-        # Open the temporary file with Visual Studio Code
-        os.system(f"code {temp_file_path}")
+    directory = "/Users/ajamal/Documents/Logs/TESTCI_Runs"
+
+    while True:  # Keep running the program
+
+        # Read the latest log file from the directory and get its memory-mapped object
+        mm = read_latest_log_from_directory(directory)
+        if mm:
+            # Create a temporary file path with a .txt suffix
+            temp_file_path = tempfile.mktemp(suffix=".txt")
+            # Extract failed test cases from the memory-mapped object and write them to the temporary file
+            extract_failed_test_cases(mm, temp_file_path)
+            # Close the memory-mapped object
+            mm.close()
+            # Open the temporary file with Visual Studio Code
+            os.system(f"code {temp_file_path}")
+
+        print("\033[94m                                                                                 ")
+        print("              ,d88b.                    ,d88b.                    ,d88b.         ")
+        print(" ,d88b.    ,'    \`Y88P'   ,d88b.    , '    \`Y88P'   ,d88b.    ,'     \`Y88P'   ")
+        print("'    \`Y88P'   ,d88b.    , '    \`Y88P'   ,d88b.    , '    \`Y88P'  ,d88b.     ,  ")
+        print("             '   \`Y88P'               '    \`Y88P'               '     \`Y88P'  ")
+        print("                                                                                 ")
+        print("                                                                                 \033[0m")
