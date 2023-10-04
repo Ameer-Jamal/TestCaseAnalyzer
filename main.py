@@ -24,7 +24,7 @@ def read_latest_log_from_directory(directory: str):
             print("\033[47m\t" * 13 + "\033[0m\n")
 
         # Ask the user to choose a file by number
-        choice = input("Choose a log file by number\n Enter to Select Latest \n \"R\" to refresh:  ")
+        choice = input("\033[32m Choose a log file by number\n - Enter to Select Latest \n - \'r\' to refresh:  \033[0m")
         # If the input is empty, default to the first log file
         if choice == 'r' or choice == 'R':
             print("\n \033[92m===REFRESHING====\033[0m\n")
