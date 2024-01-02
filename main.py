@@ -13,39 +13,52 @@ import utilities as utils
 def read_latest_log_from_directory(directory: str):
     """Reads the latest log file from a directory and returns its memory-mapped object."""
     try:
-        # Get a list of files in the directory
-        files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-        # Sort the files by modification time in ascending order (oldest first)
-        files.sort(key=lambda x: os.path.getmtime(os.path.join(directory, x)))
+        files = get_files_from_dir(directory)
 
-        # Print the files with their numbers
-        print("\n \033[42m \033[31m" + "\t" * 6 + "FILES:" + "\t" * 6 + "\033[0m\n")
-        for idx, filename in enumerate(files, 1):
-            print(f"\033[95m{idx}\033[0m. \033[93m{filename}\033[0m\n")
-            print("\033[47m\t" * 13 + "\033[0m\n")
+        print_files_in_console(files)
 
         # Ask the user to choose a file by number
-        choice = input(
-            "\033[32m Choose a log file by number\n - Enter to Select Latest \n - \'r\' to refresh:  \033[0m")
+        choice = utils.input_file_to_select()
         # If the input is empty, default to the latest log file
         if choice.lower() == 'r':
             utils.insert_console_separator()
-            print("\n \033[92m==================================REFRESHING==================================\033[0m\n")
+            utils.print_refresh_message_in_console()
             utils.insert_console_separator()
             return
         else:
             choice = len(files) if choice == "" else int(choice)
 
-        # Open the chosen file in read mode
-        with open(os.path.join(directory, files[choice - 1]), 'r') as f:
-            # Create a memory-mapped object from the file
-            mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-            # Return the memory-mapped object
-            return mm
+        return return_file_chosen_as_memory_mapped_obj(choice, directory, files)
+
     except Exception as e:
         # Print the error message and return an empty string
         print(f"An error occurred: {e}")
         return ""
+
+
+def return_file_chosen_as_memory_mapped_obj(choice, directory, files):
+    # Open the chosen file in read mode
+    with open(os.path.join(directory, files[choice - 1]), 'r') as f:
+        # Create a memory-mapped object from the file
+        mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+        # Return the memory-mapped object
+        return mm
+
+
+def print_files_in_console(files):
+    """Print the files with their numbers in console"""
+    utils.print_files_header_in_console()
+    for idx, filename in enumerate(files, 1):
+        utils.print_file_name(filename, idx)
+        utils.print_white_seperator_in_console()
+
+
+def get_files_from_dir(directory):
+    """Get a list of files in the directory oldest first"""
+    files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+    # Sort the files by modification time in ascending order (oldest first)
+    files.sort(key=lambda x: os.path.getmtime(os.path.join(directory, x)))
+    return files
 
 
 def extract_failed_test_cases(mm: mmap.mmap, temp_file_path: str):
@@ -54,9 +67,9 @@ def extract_failed_test_cases(mm: mmap.mmap, temp_file_path: str):
     The keys are the fail counts and the values are lists of reasons.
     """
     # Compile regular expressions for matching failed test cases and reasons
-    failed_pattern = re.compile(rb'\((\d+) FAILED\)')
-    reason_pattern = re.compile(rb'(.*?FAILED)')
-    end_reason_pattern = re.compile(rb'HeadlessChrome \d+\.\d+\.\d')
+    failed_pattern = get_failed_pattern()
+    reason_pattern = get_reason_pattern()
+    end_reason_pattern = get_end_of_reason_pattern()
 
     # Create a set to store the seen fail counts
     seen_fail_counts: Set[int] = set()
@@ -75,21 +88,37 @@ def extract_failed_test_cases(mm: mmap.mmap, temp_file_path: str):
 
                 # If the fail count is not seen before
                 if fail_count not in seen_fail_counts:
-                    # Extract the reason lines from the memory-mapped object using a generator expression
-                    reason_lines = extract_reasons(iter(mm.readline, b""), reason_pattern, end_reason_pattern)
-                    utils.insert_line_separator_in_file(temp, True, 2)
-                    # Write the fail count to the temporary file
-                    temp.write(f"{fail_count} FAILED:\n")
-                    # Write each reason line to the temporary file with a tab indentation
-                    for reason in reason_lines:
-                        temp.write(f"\t{reason}\n")
-                    # Add the fail count to the seen set
+                    write_failure_found_in_file(temp, mm, fail_count, reason_pattern, end_reason_pattern, )
                     seen_fail_counts.add(fail_count)
         if not seen_fail_counts:
             utils.write_no_errors_message_to_file(temp)
 
         # Close the memory-mapped object
         mm.close()
+
+
+def get_end_of_reason_pattern():
+    return re.compile(rb'HeadlessChrome \d+\.\d+\.\d')
+
+
+def get_reason_pattern():
+    return re.compile(rb'(.*?FAILED)')
+
+
+def get_failed_pattern():
+    return re.compile(rb'\((\d+) FAILED\)')
+
+
+def write_failure_found_in_file(file, mm, fail_count, reason_pattern, end_reason_pattern):
+    """ Extract the reason lines from the memory-mapped object using a generator expression"""
+    reason_lines = extract_reasons(iter(mm.readline, b""), reason_pattern, end_reason_pattern)
+    utils.insert_line_separator_in_file(file, True, 2)
+    # Write the fail count to the temporary file
+    file.write(f"{fail_count} FAILED:\n")
+    # Write each reason line to the temporary file with a tab indentation
+    for reason in reason_lines:
+        file.write(f"\t{reason}\n")
+    # Add the fail count to the seen set
 
 
 def extract_reasons(lines: iter, start_pattern: re.Pattern, end_pattern: re.Pattern) -> List[str]:
@@ -155,12 +184,14 @@ if __name__ == "__main__":
         # Read the latest log file from the directory and get its memory-mapped object
         mm = read_latest_log_from_directory(directory)
         if mm:
-            # Create a temporary file path with a .txt suffix
-            temp_file_path = tempfile.mktemp(suffix=".txt")
-            # Extract failed test cases from the memory-mapped object and write them to the temporary filer
-            extract_failed_test_cases(mm, temp_file_path)
-            # Close the memory-mapped object
-            mm.close()
+            # Create a secure temporary file
+            with tempfile.NamedTemporaryFile(mode='w+', suffix=".txt", delete=False) as temp_file:
+                temp_file_path = temp_file.name
+                # Extract failed test cases from the memory-mapped object and write them to the temporary file
+                extract_failed_test_cases(mm, temp_file_path)
+                # Close the memory-mapped object
+                mm.close()
+
             # Open the temporary file with Visual Studio Code
             os.system(f"code {temp_file_path}")
             utils.insert_console_separator()
