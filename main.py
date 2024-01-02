@@ -15,8 +15,8 @@ def read_latest_log_from_directory(directory: str):
     try:
         # Get a list of files in the directory
         files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-        # Sort the files by modification time in descending order
-        files.sort(key=lambda x: os.path.getmtime(os.path.join(directory, x)), reverse=True)
+        # Sort the files by modification time in ascending order (oldest first)
+        files.sort(key=lambda x: os.path.getmtime(os.path.join(directory, x)))
 
         # Print the files with their numbers
         print("\n \033[42m \033[31m" + "\t" * 6 + "FILES:" + "\t" * 6 + "\033[0m\n")
@@ -34,7 +34,7 @@ def read_latest_log_from_directory(directory: str):
             utils.insert_console_separator()
             return
         else:
-            choice = 1 if choice == "" else int(choice)
+            choice = len(files) if choice == "" else int(choice)
 
         # Open the chosen file in read mode
         with open(os.path.join(directory, files[choice - 1]), 'r') as f:
