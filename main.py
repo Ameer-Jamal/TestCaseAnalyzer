@@ -7,6 +7,7 @@ import os  # For file and directory operations
 import mmap  # For memory-mapped file objects
 import tempfile  # For creating temporary files
 from typing import Dict, List, Set  # For type annotations
+import utilities as utils
 
 
 def read_latest_log_from_directory(directory: str):
@@ -24,10 +25,13 @@ def read_latest_log_from_directory(directory: str):
             print("\033[47m\t" * 13 + "\033[0m\n")
 
         # Ask the user to choose a file by number
-        choice = input("\033[32m Choose a log file by number\n - Enter to Select Latest \n - \'r\' to refresh:  \033[0m")
-        # If the input is empty, default to the first log file
-        if choice == 'r' or choice == 'R':
-            print("\n \033[92m===REFRESHING====\033[0m\n")
+        choice = input(
+            "\033[32m Choose a log file by number\n - Enter to Select Latest \n - \'r\' to refresh:  \033[0m")
+        # If the input is empty, default to the latest log file
+        if choice.lower() == 'r':
+            utils.insert_console_separator()
+            print("\n \033[92m==================================REFRESHING==================================\033[0m\n")
+            utils.insert_console_separator()
             return
         else:
             choice = 1 if choice == "" else int(choice)
@@ -73,7 +77,7 @@ def extract_failed_test_cases(mm: mmap.mmap, temp_file_path: str):
                 if fail_count not in seen_fail_counts:
                     # Extract the reason lines from the memory-mapped object using a generator expression
                     reason_lines = extract_reasons(iter(mm.readline, b""), reason_pattern, end_reason_pattern)
-                    temp.write("====================================================================================\n")
+                    utils.insert_line_separator_in_file(temp, True, 2)
                     # Write the fail count to the temporary file
                     temp.write(f"{fail_count} FAILED:\n")
                     # Write each reason line to the temporary file with a tab indentation
@@ -82,13 +86,7 @@ def extract_failed_test_cases(mm: mmap.mmap, temp_file_path: str):
                     # Add the fail count to the seen set
                     seen_fail_counts.add(fail_count)
         if not seen_fail_counts:
-            temp.write("\n")
-            temp.write("  _   _          _____                           _____                       _ \n")
-            temp.write(" | \\ | | ___   | ____|_ __ _ __ ___  _ __ ___   |  ___|__  _   _ _ __    __|  |\n")
-            temp.write(" |  \\| |/ _ \\  |  _| | '__| '__/ _  \| '__/ __| | |_ / _  \| | | | '_ \ /     |\n")
-            temp.write(" | |\\  | (_) | | |___| |  | | | (_) | |   \__ \ |  _| (_) | |_| | | | | (_|   |\n")
-            temp.write(" |_| \\_|\\___/  |_____|_|  |_|  \___/|_|  |___/ |_|  \___/ \ __,_|_| |_|\__,__ |\n")
-            temp.write("\n")
+            utils.write_no_errors_message_to_file(temp)
 
         # Close the memory-mapped object
         mm.close()
@@ -138,7 +136,7 @@ def write_to_temp_file(results: Dict[int, List[str]]) -> str:
         # Iterate over the results dictionary items
         for count, reasons in results.items():
             # Write a separator line to the temporary file
-            temp.write("============================================================================")
+            utils.insert_line_separator_in_file(temp, False, 1)
             # Write the fail count to the temporary file
             temp.write(f"{count} FAILED:\n")
             # Write each reason to the temporary file with a tab indentation
@@ -159,17 +157,10 @@ if __name__ == "__main__":
         if mm:
             # Create a temporary file path with a .txt suffix
             temp_file_path = tempfile.mktemp(suffix=".txt")
-            # Extract failed test cases from the memory-mapped object and write them to the temporary file
+            # Extract failed test cases from the memory-mapped object and write them to the temporary filer
             extract_failed_test_cases(mm, temp_file_path)
             # Close the memory-mapped object
             mm.close()
             # Open the temporary file with Visual Studio Code
             os.system(f"code {temp_file_path}")
-
-        print("\033[94m                                                                                 ")
-        print("              ,d88b.                    ,d88b.                    ,d88b.         ")
-        print(" ,d88b.    ,'    \`Y88P'   ,d88b.    , '    \`Y88P'   ,d88b.    ,'     \`Y88P'   ")
-        print("'    \`Y88P'   ,d88b.    , '    \`Y88P'   ,d88b.    , '    \`Y88P'  ,d88b.     ,  ")
-        print("             '   \`Y88P'               '    \`Y88P'               '     \`Y88P'  ")
-        print("                                                                                 ")
-        print("                                                                                 \033[0m")
+            utils.insert_console_separator()
