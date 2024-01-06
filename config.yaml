@@ -1,0 +1,10 @@
+log_location:
+  # The directory where the logs you want to feed the program are.
+  where_are_your_logs_located:
+
+file_handling:
+  # Set to true to use temporary files for reporting, false to use permanent files
+  use_temp_file:
+
+  # Directory to store permanent report files (when use_temp_file is false)
+  report_directory:
