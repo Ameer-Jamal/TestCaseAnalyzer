@@ -1,3 +1,7 @@
+import datetime  # for custom timestamp
+import os  # For file and directory operations
+
+
 def insert_line_separator_in_file(temp_file, with_new_line, number_of_lines):
     """Writes in file seperator with amount and new line depending on params"""
     separator = "===============================================================================\n" if with_new_line \
@@ -44,11 +48,26 @@ def print_file_name(filename, idx):
 
 
 def print_files_header_in_console():
-    """print the word FILES with green highlight"""
+    """print the Word FILES with green highlight"""
     print("\n \033[42m \033[31m" + "\t" * 6 + "FILES:" + "\t" * 6 + "\033[0m\n")
+
 
 def input_file_to_select():
     """input with input message in green"""
     return input(
         "\033[32m Choose a log file by number\n - Enter to Select Latest \n - \'r\' to refresh:  \033[0m")
 
+
+def create_unique_filename(directory, prefix="report-at-time-", suffix=".txt"):
+    # Get the current date in YYYY-MM-DD format
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    filename = f"{prefix}{date_str}{suffix}"
+    filepath = os.path.join(directory, filename)
+
+    # Check if file exists and append a counter in the format (1), (2), etc.
+    counter = 1
+    while os.path.exists(filepath):
+        filepath = os.path.join(directory, f"{prefix}{date_str}({counter}){suffix}")
+        counter += 1
+
+    return filepath
