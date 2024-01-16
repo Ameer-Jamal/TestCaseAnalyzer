@@ -4,7 +4,11 @@ log_location:
 
 file_handling:
   # Set to true to use temporary files for reporting, false to use permanent files
-  use_temp_file:
+  use_temp_file: true
 
   # Directory to store permanent report files (when use_temp_file is false)
   report_directory:
+
+# Experimental GUI
+gui_mode:
+  use_gui_mode: true
