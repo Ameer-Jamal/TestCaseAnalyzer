@@ -6,9 +6,10 @@ import mmap  # For memory-mapped file objects
 import tempfile  # For creating temporary files
 import utilities as utils  # For utils
 import yaml  # For reading config file
-import tkinter as tk  # gui mode tkinter instance
-from log_file_app import LogFileApp  # LogFileApp is defined in log_file_app.py
+import sys
+from PyQt5.QtWidgets import QApplication
 from log_analysis import LogAnalysis  # Log analysis tools
+from log_file_app import LogFileApp
 
 
 def read_latest_log_from_directory(directory: str):
@@ -55,16 +56,16 @@ def print_files_in_console(files):
 
 
 def main_run_gui_version(gui_config):
-    root = tk.Tk()
-    app = LogFileApp(root)
+    app = QApplication(sys.argv)  # Create a new QApplication instance
+    main_window = LogFileApp()    # Instantiate your LogFileApp
 
     if gui_config:
-        app.set_configuration(gui_config)
+        main_window.set_configuration(gui_config)
     else:
-        app.show_alert(
-            "Config.yaml not found or values are missing. Please fill in the values in the application.")
+        main_window.show_alert("Config.yaml not found or values are missing. Please fill in the values in the application.")
 
-    root.mainloop()
+    main_window.show()  # Show the main window
+    sys.exit(app.exec_())  # Execute the application's main loop
 
 
 def main_run_cli_version(cli_config):
