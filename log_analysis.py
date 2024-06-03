@@ -4,6 +4,7 @@ import tempfile
 import utilities as utils
 import mmap  # For memory-mapped file objects
 from typing import Dict, List, Set  # For type annotations
+import consts
 
 
 def _write_to_temp_file(results: Dict[int, List[str]]) -> str:
@@ -15,24 +16,24 @@ def _write_to_temp_file(results: Dict[int, List[str]]) -> str:
             # Write a separator line to the temporary file
             utils.insert_line_separator_in_file(temp, False, 1)
             # Write the fail count to the temporary file
-            temp.write(f"{count} FAILED:\n")
+            temp.write(f"{count}{consts.FAILED_MESSAGE}\n")
             # Write each reason to the temporary file with a tab indentation
             for reason in reasons:
-                temp.write(f"\t{reason}\n")
+                temp.write(f"{consts.TAB_INDENT}{reason}\n")
         # Return the temporary file path
         return temp.name
 
 
 def _get_failed_pattern():
-    return re.compile(rb'\((\d+) FAILED\)')
+    return re.compile(consts.FAILED_PATTERN)
 
 
 def _get_reason_pattern():
-    return re.compile(rb'(.*?FAILED)')
+    return re.compile(consts.REASON_PATTERN)
 
 
 def _get_end_of_reason_pattern():
-    return re.compile(rb'HeadlessChrome \d+\.\d+\.\d')
+    return re.compile(consts.END_OF_REASON_PATTERN)
 
 
 def _extract_reasons(lines: iter, start_pattern: re.Pattern, end_pattern: re.Pattern):
@@ -60,27 +61,26 @@ def _extract_reasons(lines: iter, start_pattern: re.Pattern, end_pattern: re.Pat
         if end_pattern.match(line):
             break
 
-        # Append the line to the reason lines list
+        # Append the line to the reason_lines list
         reason_lines.append(line_str)
 
-        # If the reason lines list has 20 elements, break the loop
+        # If the reason_lines list has 20 elements, break the loop
         # Remove this if you don't want a limit.
         if len(reason_lines) == 20:
             break
-    # Return the reason lines list
+    # Return the reason_lines list
     return reason_lines
 
 
 def _write_failure_found_in_file(file, mm, fail_count, reason_pattern, end_reason_pattern):
-    """ Extract the reason lines from the memory-mapped object using a generator expression"""
+    """Extract the reason lines from the memory-mapped object using a generator expression"""
     reason_lines = _extract_reasons(iter(mm.readline, b""), reason_pattern, end_reason_pattern)
     utils.insert_line_separator_in_file(file, True, 2)
     # Write the fail count to the temporary file
-    file.write(f"{fail_count} FAILED:\n")
+    file.write(f"{fail_count}{consts.FAILED_MESSAGE}\n")
     # Write each reason line to the temporary file with a tab indentation
     for reason in reason_lines:
-        file.write(f"\t{reason}\n")
-    # Add the fail count to the seen set
+        file.write(f"{consts.TAB_INDENT}{reason}\n")
 
 
 #####################################################################################################################
@@ -122,8 +122,7 @@ class LogAnalysis:
 
                     # If the fail count is not seen before
                     if fail_count not in seen_fail_counts:
-                        _write_failure_found_in_file(temp, mm, fail_count, reason_pattern,
-                                                                 end_reason_pattern, )
+                        _write_failure_found_in_file(temp, mm, fail_count, reason_pattern, end_reason_pattern)
                         seen_fail_counts.add(fail_count)
             if not seen_fail_counts:
                 utils.write_no_errors_message_to_file(temp)

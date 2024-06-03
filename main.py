@@ -4,6 +4,7 @@
 import os  # For file and directory operations
 import mmap  # For memory-mapped file objects
 import tempfile  # For creating temporary files
+import consts  # For constants
 import utilities as utils  # For utils
 import yaml  # For reading config file
 import sys
@@ -22,7 +23,7 @@ def read_latest_log_from_directory(directory: str):
         # Ask the user to choose a file by number
         choice = utils.input_file_to_select()
         # If the input is empty, default to the latest log file
-        if choice.lower() == 'r':
+        if choice.lower() == consts.REFRESH_OPTION:
             utils.insert_console_separator()
             utils.print_refresh_message_in_console()
             utils.insert_console_separator()
@@ -34,7 +35,7 @@ def read_latest_log_from_directory(directory: str):
 
     except Exception as e:
         # Print the error message and return an empty string
-        print(f"An error occurred: {e}")
+        print(consts.AN_ERROR_OCCURRED_MESSAGE.format(e))
         return ""
 
 
@@ -57,12 +58,12 @@ def print_files_in_console(files):
 
 def main_run_gui_version(gui_config):
     app = QApplication(sys.argv)  # Create a new QApplication instance
-    main_window = LogFileApp()    # Instantiate your LogFileApp
+    main_window = LogFileApp()  # Instantiate your LogFileApp
 
     if gui_config:
         main_window.set_configuration(gui_config)
     else:
-        main_window.show_alert("Config.yaml not found or values are missing. Please fill in the values in the application.")
+        main_window.show_alert(consts.CONFIGURATION_SAVED_MESSAGE)
 
     main_window.show()  # Show the main window
     sys.exit(app.exec_())  # Execute the application's main loop
@@ -75,7 +76,7 @@ def main_run_cli_version(cli_config):
     report_directory = cli_config.get('file_handling', {}).get('report_directory')
 
     if not log_directory or use_temp_file is None or not report_directory:
-        print("Config.yaml values are missing. Please fill in the values and try again.")
+        print(consts.CONFIGURATION_SAVED_MESSAGE)
         exit()
 
     while True:
@@ -111,8 +112,7 @@ if __name__ == "__main__":
     use_gui_mode = config.get('gui_mode', {}).get('use_gui_mode', False)
 
     if use_gui_mode is None:
-        print("Config.yaml use_gui_mode value is missing. Fill in true or false for gui or command line program "
-              "interactions.")
+        print(consts.CONFIGURATION_SAVED_MESSAGE)
         exit()
     elif use_gui_mode:
         main_run_gui_version(config)

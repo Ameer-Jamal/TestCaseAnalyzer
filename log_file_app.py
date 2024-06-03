@@ -4,25 +4,27 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout,
     QMessageBox, QDialog, QDialogButtonBox, QLineEdit, QCheckBox, QLabel, QGridLayout
 from PyQt5.Qsci import QsciScintilla, QsciLexerPython
 import os
+import consts
 import mmap
 import tempfile
 import utilities as utils
 import ruamel.yaml
 from log_analysis import LogAnalysis
+from custom_log_lexer import CustomLogLexer
 
 
 class LogFileApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Log File Analyzer")
+        self.setWindowTitle(consts.WINDOW_TITLE)
         self.setGeometry(300, 300, 1000, 800)
 
         # Main layout
         layout = QVBoxLayout()
 
         # Directory selection button
-        self.select_dir_button = QPushButton("Select Log Directory")
+        self.select_dir_button = QPushButton(consts.SELECT_LOG_DIRECTORY)
         self.select_dir_button.clicked.connect(self.select_directory)
         layout.addWidget(self.select_dir_button)
 
@@ -30,24 +32,31 @@ class LogFileApp(QMainWindow):
         self.log_files_listbox = QListWidget()
         layout.addWidget(self.log_files_listbox)
 
+        # Reload Files button
+        self.reload_button = QPushButton(consts.RELOAD_FILES_MESSAGE)
+        self.reload_button.clicked.connect(self.reload_files)
+        layout.addWidget(self.reload_button)
+
         # Process button
-        self.process_button = QPushButton("Process Selected File")
+        self.process_button = QPushButton(consts.PROCESS_SELECTED_FILE_MESSAGE)
         self.process_button.clicked.connect(self.process_file)
         layout.addWidget(self.process_button)
 
         # Open in VS Code button
-        self.open_vscode_button = QPushButton("Open in VS Code")
+        self.open_vscode_button = QPushButton(consts.OPEN_IN_VS_CODE_MESSAGE)
         self.open_vscode_button.clicked.connect(self.open_in_vscode)
         layout.addWidget(self.open_vscode_button)
 
         # Edit Configurations button
-        self.edit_configs_button = QPushButton("Edit Configurations")
+        self.edit_configs_button = QPushButton(consts.EDIT_CONFIGURATIONS_MESSAGE)
         self.edit_configs_button.clicked.connect(self.edit_yaml_configs)
         layout.addWidget(self.edit_configs_button)
 
         # QScintilla editor for output
         self.output_text = QsciScintilla()
         self.lexer = QsciLexerPython()  # Set lexer for Python syntax, change as needed
+        # @TODO IMPLEMENT CUSTOM LEXER
+        # self.lexer = CustomLogLexer(self.output_text)  # Use custom lexer for log text
         self.output_text.setLexer(self.lexer)
         layout.addWidget(self.output_text)
 
@@ -64,14 +73,18 @@ class LogFileApp(QMainWindow):
         self.files = []
 
     def select_directory(self):
-        self.log_directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+        self.log_directory = QFileDialog.getExistingDirectory(self, consts.SELECT_LOG_DIRECTORY)
+        if self.log_directory:
+            self.populate_files_listbox()
+
+    def reload_files(self):
         if self.log_directory:
             self.populate_files_listbox()
 
     def process_file(self):
         selected_item = self.log_files_listbox.currentItem()
         if not selected_item:
-            QMessageBox.information(self, "Information", "Please select a file.")
+            QMessageBox.information(self, consts.INFORMATION_MESSAGE, consts.PLEASE_SELECT_A_FILE_MESSAGE)
             return
 
         choice = self.log_files_listbox.row(selected_item)
@@ -92,25 +105,19 @@ class LogFileApp(QMainWindow):
             mm.close()
             self.display_file_content(self.temp_file_path)
 
-    def populate_files_listbox(self):
-        self.log_files_listbox.clear()
-        self.files = LogAnalysis.get_files_from_dir(self.log_directory)
-        for filename in self.files:
-            self.log_files_listbox.addItem(filename)
-
     def display_file_content(self, file_path):
         try:
             with open(file_path, 'r') as file:
                 content = file.read()
             self.output_text.setText(content)  # Set the content in QsciScintilla widget
         except Exception as e:
-            self.show_alert(f"Error reading file: {e}")
+            self.show_alert(consts.ERROR_READING_FILE_MESSAGE.format(e))
 
     def open_in_vscode(self):
         if hasattr(self, 'temp_file_path') and self.temp_file_path:
             os.system(f"code \"{self.temp_file_path}\"")
         else:
-            self.show_alert("No file to open in VS Code.")
+            self.show_alert(consts.NO_FILE_TO_OPEN_MESSAGE)
 
     def read_latest_log_from_directory(self, choice):
         try:
@@ -123,15 +130,17 @@ class LogFileApp(QMainWindow):
             return None
 
     def populate_files_listbox(self):
-        self.log_files_listbox.clear()
-        self.files = LogAnalysis.get_files_from_dir(self.log_directory, True)
-        for filename in self.files:
-            self.log_files_listbox.addItem(filename)
+        self.log_files_listbox.clear()  # Clear the listbox
+        if self.log_directory:
+            self.files = LogAnalysis.get_files_from_dir(self.log_directory, True)
+            for filename in self.files:
+                if filename not in consts.MACOS_SYSTEM_FILES:  # Skip macOS system files
+                    self.log_files_listbox.addItem(filename)
 
     @staticmethod
     def show_alert(message):
         """Show an alert message box."""
-        QMessageBox.information(None, "Alert", message)
+        QMessageBox.information(None, consts.ALERT_MESSAGE, message)
 
     def set_configuration(self, config):
         self.config = config
@@ -143,10 +152,9 @@ class LogFileApp(QMainWindow):
         if self.log_directory:
             self.populate_files_listbox()
 
-
     def edit_yaml_configs(self):
         dialog = QDialog(self)
-        dialog.setWindowTitle("Edit Configurations")
+        dialog.setWindowTitle(consts.EDIT_CONFIGURATIONS_DIALOG_TITLE)
         dialog.resize(400, 200)  # Adjust the size of the dialog
 
         layout = QVBoxLayout(dialog)
@@ -163,11 +171,11 @@ class LogFileApp(QMainWindow):
         self.load_yaml_config_to_widgets()
 
         # Add widgets to grid layout
-        grid_layout.addWidget(QLabel("Log Location:"), 0, 0)
+        grid_layout.addWidget(QLabel(consts.LOG_LOCATION_LABEL), 0, 0)
         grid_layout.addWidget(self.log_location_edit, 0, 1)
-        grid_layout.addWidget(QLabel("Use Temporary Files?:"), 1, 0)
+        grid_layout.addWidget(QLabel(consts.USE_TEMPORARY_FILES_LABEL), 1, 0)
         grid_layout.addWidget(self.use_temp_file_checkbox, 1, 1)
-        grid_layout.addWidget(QLabel("Report Directory:"), 2, 0)
+        grid_layout.addWidget(QLabel(consts.REPORT_DIRECTORY_LABEL), 2, 0)
         grid_layout.addWidget(self.report_directory_edit, 2, 1)
 
         # Add grid layout to main layout
@@ -181,6 +189,7 @@ class LogFileApp(QMainWindow):
 
         dialog.setLayout(layout)
         dialog.exec_()
+
     def get_config_path(self):
         # Construct the full path to the config.yaml file
         return os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
@@ -211,7 +220,7 @@ class LogFileApp(QMainWindow):
         with open(config_path, 'w') as file:
             yaml.dump(config, file)
 
-        QMessageBox.information(self, "Success", "Configuration saved successfully.")
+        QMessageBox.information(self, consts.SUCCESS_MESSAGE, consts.CONFIGURATION_SAVED_MESSAGE)
 
 
 def main():
