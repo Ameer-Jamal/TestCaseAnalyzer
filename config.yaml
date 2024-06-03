@@ -12,3 +12,6 @@ file_handling:
 # Experimental GUI
 gui_mode:
   use_gui_mode: true
+
+ui_settings:
+  default_font_size: 14

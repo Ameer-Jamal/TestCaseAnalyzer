@@ -1,8 +1,9 @@
 import sys
 
-from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget, QListWidget, QFileDialog, \
-    QMessageBox, QDialog, QDialogButtonBox, QLineEdit, QCheckBox, QLabel, QGridLayout
-from PyQt5.Qsci import QsciScintilla, QsciLexerPython
+from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QListWidget, \
+    QFileDialog, \
+    QMessageBox, QDialog, QDialogButtonBox, QLineEdit, QCheckBox, QLabel, QGridLayout, QSplitter
+from PyQt5.Qsci import QsciScintilla
 import os
 import consts
 import mmap
@@ -19,50 +20,77 @@ class LogFileApp(QMainWindow):
 
         self.setWindowTitle(consts.WINDOW_TITLE)
         self.setGeometry(300, 300, 1000, 800)
+        self.default_font_size = 14  # Default value if not set in config
+
+        # Load stylesheet
+        stylesheet = self.load_stylesheet("styles.css")
 
         # Main layout
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
 
-        # Directory selection button
-        self.select_dir_button = QPushButton(consts.SELECT_LOG_DIRECTORY)
-        self.select_dir_button.clicked.connect(self.select_directory)
-        layout.addWidget(self.select_dir_button)
+        # Create horizontal layout for log files list and output editor
+        splitter = QSplitter()
 
         # Listbox for displaying log files
         self.log_files_listbox = QListWidget()
-        layout.addWidget(self.log_files_listbox)
+        self.log_files_listbox.itemDoubleClicked.connect(self.process_file)  # Add double-click event
+        splitter.addWidget(self.log_files_listbox)
+
+        # QScintilla editor for output
+        self.output_text = QsciScintilla()
+        self.lexer = CustomLogLexer(self.output_text)  # Use custom lexer for log text
+        self.output_text.setLexer(self.lexer)
+        self.output_text.setWrapMode(QsciScintilla.SC_WRAP_WORD)  # Enable text wrapping
+        splitter.addWidget(self.output_text)
+
+        # Add the splitter to the main layout
+        main_layout.addWidget(splitter)
+
+        # Create a horizontal layout for buttons
+        button_layout = QHBoxLayout()
+
+        # Increase Font Size button
+        self.increase_font_button = QPushButton(consts.INCREASE_FONT_SIZE)
+        self.increase_font_button.clicked.connect(self.increase_font_size)
+        self.increase_font_button.setStyleSheet(stylesheet)
+        button_layout.addWidget(self.increase_font_button)
+
+        # Decrease Font Size button
+        self.decrease_font_button = QPushButton(consts.DECREASE_FONT_SIZE)
+        self.decrease_font_button.clicked.connect(self.decrease_font_size)
+        self.decrease_font_button.setStyleSheet(stylesheet)
+        button_layout.addWidget(self.decrease_font_button)
 
         # Reload Files button
         self.reload_button = QPushButton(consts.RELOAD_FILES_MESSAGE)
         self.reload_button.clicked.connect(self.reload_files)
-        layout.addWidget(self.reload_button)
+        self.reload_button.setStyleSheet(stylesheet)
+        button_layout.addWidget(self.reload_button)
 
         # Process button
         self.process_button = QPushButton(consts.PROCESS_SELECTED_FILE_MESSAGE)
         self.process_button.clicked.connect(self.process_file)
-        layout.addWidget(self.process_button)
+        self.process_button.setStyleSheet(stylesheet)
+        button_layout.addWidget(self.process_button)
 
         # Open in VS Code button
         self.open_vscode_button = QPushButton(consts.OPEN_IN_VS_CODE_MESSAGE)
         self.open_vscode_button.clicked.connect(self.open_in_vscode)
-        layout.addWidget(self.open_vscode_button)
+        self.open_vscode_button.setStyleSheet(stylesheet)
+        button_layout.addWidget(self.open_vscode_button)
 
         # Edit Configurations button
         self.edit_configs_button = QPushButton(consts.EDIT_CONFIGURATIONS_MESSAGE)
         self.edit_configs_button.clicked.connect(self.edit_yaml_configs)
-        layout.addWidget(self.edit_configs_button)
+        self.edit_configs_button.setStyleSheet(stylesheet)
+        button_layout.addWidget(self.edit_configs_button)
 
-        # QScintilla editor for output
-        self.output_text = QsciScintilla()
-        self.lexer = QsciLexerPython()  # Set lexer for Python syntax, change as needed
-        # @TODO IMPLEMENT CUSTOM LEXER
-        # self.lexer = CustomLogLexer(self.output_text)  # Use custom lexer for log text
-        self.output_text.setLexer(self.lexer)
-        layout.addWidget(self.output_text)
+        # Add the button layout to the main layout
+        main_layout.addLayout(button_layout)
 
         # Set the layout to the central widget
         central_widget = QWidget()
-        central_widget.setLayout(layout)
+        central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
         self.config = None
@@ -70,7 +98,27 @@ class LogFileApp(QMainWindow):
         self.use_temp_file = None
         self.report_directory = None
         self.temp_file_path = None
+        self.default_font_size = None
         self.files = []
+
+    @staticmethod
+    def load_stylesheet(filename):
+        with open(filename, "r") as file:
+            return file.read()
+
+    def increase_font_size(self):
+        self.default_font_size += 1
+        self.update_font_size_in_styles(self.default_font_size, self.output_text.font().family())
+
+    def decrease_font_size(self):
+        if self.default_font_size > 1:  # Prevent font size from being too small
+            self.default_font_size -= 1
+            self.update_font_size_in_styles(self.default_font_size, self.output_text.font().family())
+
+    def update_font_size_in_styles(self, size, font_family):
+        for style in range(128):  # Scintilla supports up to 128 styles
+            self.output_text.SendScintilla(self.output_text.SCI_STYLESETSIZE, style, size)
+            self.output_text.SendScintilla(self.output_text.SCI_STYLESETFONT, style, font_family.encode('utf-8'))
 
     def select_directory(self):
         self.log_directory = QFileDialog.getExistingDirectory(self, consts.SELECT_LOG_DIRECTORY)
@@ -142,15 +190,25 @@ class LogFileApp(QMainWindow):
         """Show an alert message box."""
         QMessageBox.information(None, consts.ALERT_MESSAGE, message)
 
+    def set_initial_font_size(self):
+        font = self.output_text.font()
+        font.setPointSize(self.default_font_size)
+        self.output_text.setFont(font)
+        self.update_font_size_in_styles(self.default_font_size, font.family())
+
     def set_configuration(self, config):
         self.config = config
         self.log_directory = self.config.get('log_location', {}).get('where_are_your_logs_located', '')
         self.use_temp_file = self.config.get('file_handling', {}).get('use_temp_file', True)
         self.report_directory = self.config.get('file_handling', {}).get('report_directory', '')
+        self.default_font_size = self.config.get('ui_settings', {}).get('default_font_size', 16)
 
         # Check if a log directory is specified and populate the listbox
         if self.log_directory:
             self.populate_files_listbox()
+
+        # Set the initial font size
+        self.set_initial_font_size()
 
     def edit_yaml_configs(self):
         dialog = QDialog(self)
@@ -166,6 +224,15 @@ class LogFileApp(QMainWindow):
         self.use_temp_file_checkbox = QCheckBox()
         self.report_directory_edit = QLineEdit()
         self.report_directory_edit.setFixedWidth(300)  # Adjust the width
+        self.default_font_size_edit = QLineEdit()
+        self.default_font_size_edit.setFixedWidth(100)  # Adjust the width
+
+        # Directory selection button
+        self.select_dir_button = QPushButton(consts.SELECT_LOG_DIRECTORY)
+        self.select_dir_button.clicked.connect(self.select_directory)
+        stylesheet = self.load_stylesheet("styles.css")
+        self.select_dir_button.setStyleSheet(stylesheet)
+        layout.addWidget(self.select_dir_button)
 
         # Load current configuration into the widgets
         self.load_yaml_config_to_widgets()
@@ -177,6 +244,8 @@ class LogFileApp(QMainWindow):
         grid_layout.addWidget(self.use_temp_file_checkbox, 1, 1)
         grid_layout.addWidget(QLabel(consts.REPORT_DIRECTORY_LABEL), 2, 0)
         grid_layout.addWidget(self.report_directory_edit, 2, 1)
+        grid_layout.addWidget(QLabel("Default Font Size:"), 3, 0)
+        grid_layout.addWidget(self.default_font_size_edit, 3, 1)
 
         # Add grid layout to main layout
         layout.addLayout(grid_layout)
@@ -190,10 +259,10 @@ class LogFileApp(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec_()
 
-    def get_config_path(self):
+    @staticmethod
+    def get_config_path():
         # Construct the full path to the config.yaml file
         return os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
-
 
     def load_yaml_config_to_widgets(self):
         config_path = self.get_config_path()
@@ -204,6 +273,7 @@ class LogFileApp(QMainWindow):
             self.log_location_edit.setText(config.get('log_location', {}).get('where_are_your_logs_located', ''))
             self.use_temp_file_checkbox.setChecked(config.get('file_handling', {}).get('use_temp_file', False))
             self.report_directory_edit.setText(config.get('file_handling', {}).get('report_directory', ''))
+            self.default_font_size_edit.setText(str(config.get('ui_settings', {}).get('default_font_size', 14)))
 
     def save_yaml_config_from_widgets(self):
         config_path = self.get_config_path()
@@ -215,10 +285,15 @@ class LogFileApp(QMainWindow):
         config['log_location']['where_are_your_logs_located'] = self.log_location_edit.text()
         config['file_handling']['use_temp_file'] = self.use_temp_file_checkbox.isChecked()
         config['file_handling']['report_directory'] = self.report_directory_edit.text()
+        config['ui_settings']['default_font_size'] = int(self.default_font_size_edit.text())
 
         # Write back the entire configuration
         with open(config_path, 'w') as file:
             yaml.dump(config, file)
+
+        # Update the current font size
+        self.default_font_size = int(self.default_font_size_edit.text())
+        self.set_initial_font_size()
 
         QMessageBox.information(self, consts.SUCCESS_MESSAGE, consts.CONFIGURATION_SAVED_MESSAGE)
 
