@@ -2,6 +2,8 @@
 
 ## Overview
 `TestCaseAnalyzer` is a Python application specifically tailored for Angular applications using Jasmine and Karma for testing. It parses and analyzes test case logs to extract failed test cases along with the reasons for their failure. The results are then written to a temporary file for easy inspection. This tool is especially optimized for large log files and is invaluable for projects where manual log inspection becomes cumbersome.
+![image](https://github.com/user-attachments/assets/827c7bb9-62f8-48bb-88d5-9ccbbb6924a4)
+
 ## Features
 
 - Efficiently handles large log files (up to 10MB or more)
